@@ -48,3 +48,9 @@ function findNewPets(old_pets, new_pets) {
         return !pet_found
     })
 }
+
+
+module.exports.parseImageFromPage =
+function parseImageFromPage(html) {
+    throw new Error('not implemented!')
+}

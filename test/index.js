@@ -13,10 +13,16 @@ const twitter = require('../twitter')
 describe('parser.js', () => {
     let first_page
     let second_page
+    let detail_page_1
+    let detail_page_2
+    let detail_page_no_pic
 
     before(() => {
         first_page = fs.readFileSync(__dirname + '/fixtures/1.html', 'utf8')
         second_page = fs.readFileSync(__dirname + '/fixtures/2.html', 'utf8')
+        detail_page_1 = fs.readFileSync(__dirname + '/fixtures/detail1.html', 'utf8')
+        detail_page_2 = fs.readFileSync(__dirname + '/fixtures/detail2.html', 'utf8')
+        detail_page_no_pic = fs.readFileSync(__dirname + '/fixtures/detail_no_pic.html', 'utf8')
     })
 
     describe('parsePetsFromPage', () => {
@@ -75,6 +81,21 @@ describe('parser.js', () => {
             assert.deepEqual(new_pets, [ new_pet ])
         })
     })
+
+    describe('parseImageFromPage', () => {
+        it('should find the image #1', () => {
+            let img_url = parser.parseImageFromPage(detail_page_1)
+            assert.equal(img_url, 'https://s3.amazonaws.com/filestore.rescuegroups.org/7989/pictures/animals/9689/9689532/32766302_1467x2200.jpg')
+        })
+        it('should find the image #2', () => {
+            let img_url = parser.parseImageFromPage(detail_page_2)
+            assert.equal(img_url, 'https://s3.amazonaws.com/filestore.rescuegroups.org/7989/pictures/animals/10804/10804763/40546577_500x700.jpg')
+        })
+        it('should return null for no image', () => {
+            let img_url = parser.parseImageFromPage(detail_page_no_pic)
+            assert.equal(img_url, null)
+        })
+    })
 })
 
 describe('index.js', () => {
@@ -101,7 +122,6 @@ describe('index.js', () => {
 
         // and this stuff so we don't write to or read from stored_pets.json
         getStoredPets_stub = sandbox.stub(index, 'getStoredPets')
-        getStoredPets_stub.returns([])
         sandbox.stub(index, 'storeCurrentPets')
 
         // and this so we don't actually tweet
@@ -110,6 +130,9 @@ describe('index.js', () => {
     afterEach(() => sandbox.restore())
 
     it('should work with one new pet', done => {
+        // one fake stored pet so it doesn't skip the first run tweets
+        getStoredPets_stub.returns([{}])
+
         index.main((err, output) => {
             assert(twitter_stub.calledOnce)
             done(err)
@@ -126,10 +149,21 @@ describe('index.js', () => {
     })
 
     it('should tweet twice with 2 new pets', done => {
+        getStoredPets_stub.returns([])
         parsePetsFromPage_stub.returns(fake_pets.concat(fake_pets))
 
         index.main((err, output) => {
             assert.equal(twitter_stub.callCount, 2)
+            done(err)
+        })
+    })
+
+    it('should not tweet if no pets have been stored yet', done => {
+        getStoredPets_stub.returns(null)
+        parsePetsFromPage_stub.returns(fake_pets.concat(fake_pets))
+
+        index.main((err, output) => {
+            assert.equal(twitter_stub.callCount, 0)
             done(err)
         })
     })

@@ -23,24 +23,38 @@ exports.main = function main(callback){
         debug('Storing current pets')
         exports.storeCurrentPets(current_pets)
 
+        // We're done if there were no current pets
+        // Don't want to tweet everything the first time this runs
+        debug('Exiting after storing initial pet state')
+        if (stored_pets === null) return callback()
+
         debug('Finding new pets')
         let new_pets = parser.findNewPets(stored_pets, current_pets)
 
         debug(new_pets.length + ' new pets found')
 
-        // We're done if there are no new pets
-        if (new_pets.length === 0) return callback()
+        // Get large images for each new pet
+        async.eachSeries(new_pets, (pet, callback) => {
+            debug('Getting an image for ' + pet.name)
 
-        // We're done if there were no current pets
-        // Don't want to tweet everything the first time this runs
-        if (stored_pets.length === 0) return callback()
+            // TODO: parse each fullsize picture from the pet detail page
+            // TODO: save each fullsize picture to disk
+            // TODO: save path to picture to the pet object
 
-        // Tweet all new pets in series (to be gentle to the twitter API)
-        async.eachSeries(
-            new_pets,
-            (pet, cb) => twitter.tweetAPet(pet, cb),
-            callback
-        )
+            callback()
+        }, (err) => {
+            if (err) return callback(err)
+
+            // We're done if there are no new pets
+            if (new_pets.length === 0) return callback()
+
+            // Tweet all new pets in series (to be gentle to the twitter API)
+            async.eachSeries(
+                new_pets,
+                (pet, cb) => twitter.tweetAPet(pet, cb),
+                callback
+            )
+        })
     })
 }
 
@@ -55,7 +69,7 @@ function getStoredPets() {
     try {
         stored_pets = require('./stored_pets')
     } catch(e) {
-        stored_pets = []
+        stored_pets = null
     }
 
     return stored_pets
