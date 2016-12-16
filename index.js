@@ -33,28 +33,23 @@ exports.main = function main(callback){
 
         debug(new_pets.length + ' new pets found')
 
+        // We're done if there are no new pets
+        if (new_pets.length === 0) return callback()
+
         // Get large images for each new pet
-        async.eachSeries(new_pets, (pet, callback) => {
-            debug('Getting an image for ' + pet.name)
+        async.eachSeries(
+            new_pets,
+            (pet, callback) => {
+                debug('Getting an image for ' + pet.name)
 
-            // TODO: parse each fullsize picture from the pet detail page
-            // TODO: save each fullsize picture to disk
-            // TODO: save path to picture to the pet object
+                // TODO: parse each fullsize picture from the pet detail page
+                // TODO: save each fullsize picture to disk
+                // TODO: save path to picture to the pet object
 
-            callback()
-        }, (err) => {
-            if (err) return callback(err)
-
-            // We're done if there are no new pets
-            if (new_pets.length === 0) return callback()
-
-            // Tweet all new pets in series (to be gentle to the twitter API)
-            async.eachSeries(
-                new_pets,
-                (pet, cb) => twitter.tweetAPet(pet, cb),
-                callback
-            )
-        })
+                twitter.tweetAPet(pet, callback)
+            },
+            callback
+        )
     })
 }
 

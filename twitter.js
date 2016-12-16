@@ -27,6 +27,7 @@ ${pet_object.breed}
 ${pet_object.sex}
 http://www.alaskananimalrescuefriends.org/animals/detail?AnimalID=${pet_object.id}`
 
+
     twitter.statuses(
         'update',
         {
@@ -36,7 +37,7 @@ http://www.alaskananimalrescuefriends.org/animals/detail?AnimalID=${pet_object.i
         twitter_creds.access_token,
         twitter_creds.access_token_secret,
         (err, data, response) => {
-            console.log('twitter response:')
+            console.log('twitter data:', data)
             callback(err, data)
         }
     )
