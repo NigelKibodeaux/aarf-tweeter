@@ -11,7 +11,7 @@ var twitter = new twitterAPI({
 
 exports.tweetAPet =
 function tweetAPet(pet_object, callback) {
-    media_ids = []
+    let media_ids = []
     console.log('tweeting this')
     console.dir(pet_object)
 
