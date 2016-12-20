@@ -1,6 +1,12 @@
 'use strict'
 
 require('../index').main((err, data) => {
-    if (err) throw err
+    if (err) {
+        if (typeof err === Error) throw err
+
+        console.error('--- ERROR ---')
+        console.dir(err, {depth:5, color:1})
+    }
+
     if (data) console.dir(data)
 })

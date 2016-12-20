@@ -4,6 +4,7 @@ const fs = require('fs')
 const async = require('async')
 const parser = require('./parser')
 const twitter = require('./twitter')
+const config = require('./config')
 const debug = require('debug')('aarf')
 
 const DOG_SEARCH_URL = 'http://www.alaskananimalrescuefriends.org/animals/search_process?type=simple'
@@ -39,14 +40,40 @@ exports.main = function main(callback){
         // Get large images for each new pet
         async.eachSeries(
             new_pets,
-            (pet, callback) => {
+            (pet, each_callback) => {
                 debug('Getting an image for ' + pet.name)
 
-                // TODO: parse each fullsize picture from the pet detail page
-                // TODO: save each fullsize picture to disk
-                // TODO: save path to picture to the pet object
+                async.waterfall([
+                    // get pet detail page
+                    (cb) => {
+                        request.get(
+                            `${config.detail_page_prefix}${pet.id}`,
+                            (err, response, body) => cb(err, body)
+                        )
+                    },
 
-                twitter.tweetAPet(pet, callback)
+                    // parse the fullsize picture from the pet detail page
+                    (html, cb) => {
+                        try {
+                            cb(null, parser.parseImageFromPage(html))
+                        }
+                        catch (e) {
+                            // output error but don't fail the whole thing
+                            console.error('Could not parse image from detail page')
+                            cb()
+                        }
+                    },
+
+                    // save picture to disk
+                    (image_url, cb) => parser.saveImageToDisk(pet.id, image_url, cb),
+
+                    // tweet it
+                    (cb) => twitter.tweetAPet(pet, cb),
+
+                    // delete picture
+                    (twitter_stuff, cb) => parser.removeImageFromDisk(pet.id, cb),
+
+                ], each_callback)
             },
             callback
         )

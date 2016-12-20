@@ -1,44 +1,70 @@
 'use strict'
 
-var twitterAPI = require('node-twitter-api')
-var twitter_creds = require('./twitter_creds')
+const fs = require('fs')
+const twitterAPI = require('node-twitter-api')
+const async = require('async')
+const config = require('./config')
 
-var twitter = new twitterAPI({
-    consumerKey: twitter_creds.consumerKey,
-    consumerSecret: twitter_creds.consumerSecret,
+const twitter = new twitterAPI({
+    consumerKey: config.twitter.consumerKey,
+    consumerSecret: config.twitter.consumerSecret,
 })
 
 
 exports.tweetAPet =
 function tweetAPet(pet_object, callback) {
     let media_ids = []
+    let image_path = `${config.pet_image_dir}/${pet_object.id}.jpg`
     console.log('tweeting this')
     console.dir(pet_object)
 
-    // TODO: upload a photo if there is one
-        // get the fullsize one from the website
-        // download it
-        // upload it to twitter and get id
-        // push that id to media_ids
+    // upload a photo if there is one
+    let is_photo = false
+    try {
+        fs.statSync(image_path)
+        is_photo = true
+    } catch (e) { /* oh well */ }
 
-    let message =
-`${pet_object.name}
-${pet_object.breed}
-${pet_object.sex}
-http://www.alaskananimalrescuefriends.org/animals/detail?AnimalID=${pet_object.id}`
+    async.waterfall([
+        // Upload image
+        (cb) => {
+            if (!is_photo) return cb()
 
-
-    twitter.statuses(
-        'update',
-        {
-            status: message,
-            media_ids,
+             twitter.uploadMedia(
+                { media: image_path },
+                config.twitter.access_token,
+                config.twitter.access_token_secret,
+                cb
+            )
         },
-        twitter_creds.access_token,
-        twitter_creds.access_token_secret,
-        (err, data, response) => {
-            console.log('twitter data:', data)
-            callback(err, data)
+
+        // Tweet it
+        (upload, cb) => {
+            console.dir(upload, {depth:5, colors:1})
+            if (upload && upload.media_id_string)
+                media_ids.push(upload.media_id_string)
+
+            let message = ([
+                pet_object.name,
+                pet_object.breed,
+                pet_object.sex,
+                `${config.detail_page_prefix}${pet_object.id}`,
+            ]).join('\n')
+
+
+            twitter.statuses(
+                'update',
+                {
+                    status: message,
+                    media_ids,
+                },
+                config.twitter.access_token,
+                config.twitter.access_token_secret,
+                (err, data, response) => {
+                    // console.log('twitter data:', data)
+                    callback(err, data)
+                }
+            )
         }
-    )
+    ], callback)
 }

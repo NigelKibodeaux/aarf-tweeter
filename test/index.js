@@ -89,11 +89,45 @@ describe('parser.js', () => {
         })
         it('should find the image #2', () => {
             let img_url = parser.parseImageFromPage(detail_page_2)
-            assert.equal(img_url, 'https://s3.amazonaws.com/filestore.rescuegroups.org/7989/pictures/animals/10804/10804763/40546577_500x700.jpg')
+            assert.equal(img_url, 'https://s3.amazonaws.com/filestore.rescuegroups.org/7989/pictures/animals/10804/10804763/40546577_857x1200.jpg')
         })
         it('should return null for no image', () => {
             let img_url = parser.parseImageFromPage(detail_page_no_pic)
             assert.equal(img_url, null)
+        })
+    })
+
+    // Commenting out because it actually downloads something
+    // describe('saveImageToDisk', () => {
+    //     it('should work', (done) => {
+    //         parser.saveImageToDisk(
+    //             '123',
+    //             'https://s3.amazonaws.com/filestore.rescuegroups.org/7989/pictures/animals/9689/9689083/40462518_500x750.jpg',
+    //             done
+    //         )
+    //     })
+    // })
+
+    describe('removeImageFromDisk', () => {
+        let filename = `${__dirname}/../images/123.jpg`
+
+        before((done) => {
+            fs.writeFile(
+                filename,
+                'blah',
+                'utf8',
+                done
+            )
+        })
+        after((done) => {
+            fs.unlink(filename, () => done())
+        })
+
+        it('should work if the image exists', (done) => {
+            parser.removeImageFromDisk(123, done)
+        })
+        it('should work if the image does not exist', (done) => {
+            parser.removeImageFromDisk(123 + 'asd', done)
         })
     })
 })
@@ -125,7 +159,7 @@ describe('index.js', () => {
         sandbox.stub(index, 'storeCurrentPets')
 
         // and this so we don't actually tweet
-        twitter_stub = sandbox.stub(twitter, 'tweetAPet').yields()
+        twitter_stub = sandbox.stub(twitter, 'tweetAPet').yields(null, {})
     })
     afterEach(() => sandbox.restore())
 

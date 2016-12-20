@@ -1,5 +1,9 @@
 'use strict'
 const cheerio = require('cheerio')
+const request = require('request')
+const fs = require('fs')
+const config = require('./config')
+
 
 module.exports.parsePetsFromPage =
 function parsePetsFromPage(html) {
@@ -27,11 +31,6 @@ function parsePetsFromPage(html) {
                     if (cell_index === 2) { // Sex
                         pet.sex = $(cell).text().trim()
                     }
-
-                    if (cell_index === 3) { // Image
-                        let image_matches = $(cell).html().match(/src="([^"]+)"/)
-                        pet.image = image_matches && image_matches[1]
-                    }
                 })
 
             pets.push(pet) // add pet except for first row
@@ -52,5 +51,43 @@ function findNewPets(old_pets, new_pets) {
 
 module.exports.parseImageFromPage =
 function parseImageFromPage(html) {
-    throw new Error('not implemented!')
+    let $ = cheerio.load(html)
+    let url = null
+    try {
+        url = $('meta[property="og:image"]')[0].attribs['content']
+    }
+    catch (e) { console.log('No large image found') }
+
+    return url
+}
+
+
+module.exports.saveImageToDisk =
+function saveImageToDisk(pet_id, image_url, callback) {
+    let save_location = `${config.pet_image_dir}/${pet_id}.jpg`
+    let statusCode
+
+    // Do nothing if there is no image URL
+    if (!image_url) return callback()
+
+    request
+        .get(image_url)
+        .on('response', (response) => {
+            statusCode = response.statusCode
+        })
+        .on('error', callback)
+        .on('end', () => {
+            let err = null
+            if (statusCode != 200) err = new Error(statusCode)
+            callback(err)
+        })
+        .pipe(fs.createWriteStream(save_location))
+}
+
+
+module.exports.removeImageFromDisk
+= function removeImageFromDisk(pet_id, callback) {
+    let save_location = `${config.pet_image_dir}/${pet_id}.jpg`
+
+    fs.unlink(save_location, (err) => callback())
 }
