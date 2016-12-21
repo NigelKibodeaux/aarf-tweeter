@@ -1,5 +1,6 @@
 'use strict'
 
+console.log(new Date())
 require('../index').main((err, data) => {
     if (err) {
         if (typeof err === Error) throw err
